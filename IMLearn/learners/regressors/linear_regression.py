@@ -3,7 +3,7 @@ from typing import NoReturn
 from ...base import BaseEstimator
 import numpy as np
 from numpy.linalg import pinv
-
+from IMLearn import metrics
 
 class LinearRegression(BaseEstimator):
     """
@@ -49,7 +49,13 @@ class LinearRegression(BaseEstimator):
         -----
         Fits model with or without an intercept depending on value of `self.include_intercept_`
         """
-        raise NotImplementedError()
+        # y=X@w | [1 X]@[w0 w] => w=X_dagger@y
+        if self.include_intercept_:
+            X_in = np.c_[ np.ones(np.size(X,0)), X ]
+        else:
+            X_in = X
+        X_degger = np.linalg.pinv(X_in)
+        self.coefs_ = X_degger @ y
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -65,7 +71,14 @@ class LinearRegression(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        # y_hat = X @ w_hat   |  [1 X] @ w_hat
+        if self.include_intercept_:
+            X_in = np.c_[ np.ones(np.size(X,0)), X ]
+        else:
+            X_in = X
+
+        y_hat = X_in @ self.coefs_
+        return y_hat
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -84,4 +97,8 @@ class LinearRegression(BaseEstimator):
         loss : float
             Performance under MSE loss function
         """
-        raise NotImplementedError()
+
+        # if we have 'include_intercept=True' we expand X inside self.predict, so no need to expand it here.
+        y_pred = self.predict(X)
+        mse = metrics.mean_square_error(y, y_pred)
+        return mse
